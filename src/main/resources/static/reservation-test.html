@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation Test</title>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --text: #102033;
+            --muted: #5e6b7a;
+            --primary: #1d4ed8;
+            --border: #d9e2ec;
+            --danger: #b91c1c;
+            --ok: #047857;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 45%, #eef2f7 100%);
+            color: var(--text);
+        }
+        .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 18px 48px; }
+        h1 { margin: 0 0 8px; }
+        p { color: var(--muted); margin-top: 0; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(16, 32, 51, 0.06);
+        }
+        h2 { margin-top: 0; font-size: 18px; }
+        label { display: block; font-size: 13px; font-weight: 700; margin: 10px 0 6px; }
+        input, select, button, textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 14px;
+        }
+        textarea { min-height: 180px; resize: vertical; font-family: Consolas, monospace; }
+        button {
+            background: var(--primary);
+            color: white;
+            border: 0;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button.secondary { background: #475569; }
+        button.danger { background: var(--danger); }
+        .result {
+            white-space: pre-wrap;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 180px;
+            border-radius: 12px;
+            padding: 12px;
+            overflow: auto;
+        }
+        .small { font-size: 13px; color: var(--muted); }
+        .status { font-weight: 700; color: var(--ok); }
+        .inline { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Reservation Test</h1>
+    <p>Driver chọn giờ và chọn slot/zone từ danh sách còn trống theo building code.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Auth</h2>
+            <label>Username</label>
+            <input id="authUsername" value="driver">
+            <label>Password</label>
+            <input id="authPassword" type="password" value="driver123">
+            <button onclick="login()">Login</button>
+            <button class="secondary" onclick="me()">Check /me</button>
+            <button class="danger" onclick="logout()">Logout</button>
+            <div class="small">Reservation dùng session, không cần JWT.</div>
+        </div>
+
+        <div class="card">
+            <h2>Result</h2>
+            <div id="status" class="status">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+
+        <div class="card">
+            <h2>Create Reservation</h2>
+            <label>Building Code</label>
+            <input id="buildingCode" value="BLD-001">
+            <label>Vehicle Type</label>
+            <select id="vehicleType" onchange="renderAvailableOptions()">
+                <option value="CAR">CAR</option>
+                <option value="MOTORBIKE">MOTORBIKE</option>
+            </select>
+            <div class="inline">
+                <div>
+                    <label>Start Time</label>
+                    <input id="startTime" type="datetime-local">
+                </div>
+                <div>
+                    <label>End Time</label>
+                    <input id="endTime" type="datetime-local">
+                </div>
+            </div>
+            <label>Plate Number</label>
+            <input id="plateNumber" value="51A-12345">
+            <label>Available Slots for CAR</label>
+            <select id="carSlotSelect" onchange="selectCarSlot()"></select>
+            <label>Available Zones for MOTORBIKE</label>
+            <select id="motorZoneSelect" onchange="selectMotorZone()"></select>
+            <div class="inline">
+                <div>
+                    <label>Zone ID</label>
+                    <input id="zoneId" type="number" readonly>
+                </div>
+                <div>
+                    <label>Slot ID (CAR only)</label>
+                    <input id="slotId" type="number" readonly>
+                </div>
+            </div>
+            <button onclick="createReservation()">Create</button>
+            <div class="small">CAR: chọn slot trống. MOTORBIKE: chọn zone còn chỗ.</div>
+        </div>
+
+        <div class="card">
+            <h2>Manage</h2>
+            <label>Reservation ID</label>
+            <input id="reservationId" type="number" placeholder="e.g. 1">
+            <button onclick="getMyReservations()">List My Reservations</button>
+            <button id="allReservationsBtn" class="secondary" onclick="getAllReservations()">List All Reservations</button>
+            <button class="danger" onclick="cancelReservation()">Cancel Reservation</button>
+            <button class="secondary" onclick="getReservation()">Get Reservation</button>
+            <div class="small" id="roleHint">Loading role...</div>
+        </div>
+
+        <div class="card">
+            <h2>Availability</h2>
+            <button class="secondary" onclick="loadAvailability()">Load available slots/zones</button>
+            <button class="secondary" onclick="renderAvailableOptions()">Refresh available list</button>
+            <textarea id="overview" readonly></textarea>
+            <textarea id="available" readonly></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    const result = document.getElementById('result');
+    const statusEl = document.getElementById('status');
+    const overview = document.getElementById('overview');
+    const available = document.getElementById('available');
+
+    let infraData = null;
+
+    function setOutput(value, ok = true) {
+        statusEl.textContent = ok ? 'OK' : 'ERROR';
+        statusEl.style.color = ok ? '#047857' : '#b91c1c';
+        result.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    }
+
+    function unwrapApiResponse(payload) {
+        return payload && typeof payload === 'object' && 'success' in payload && 'data' in payload
+            ? payload.data
+            : payload;
+    }
+
+    async function readResponse(response) {
+        const text = await response.text();
+        if (!response.ok) {
+            throw new Error(`${response.status} ${response.statusText}\n${text}`);
+        }
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+
+    function toLocalInputValue(date) {
+        const pad = (value) => String(value).padStart(2, '0');
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function setDefaultReservationTimes() {
+        const start = new Date(Date.now() + 60 * 60 * 1000);
+        const end = new Date(Date.now() + 3 * 60 * 60 * 1000);
+        document.getElementById('startTime').value = toLocalInputValue(start);
+        document.getElementById('endTime').value = toLocalInputValue(end);
+    }
+
+    async function request(path, method = 'GET', body) {
+        const response = await fetch(path, {
+            method,
+            credentials: 'include',
+            headers: body ? {'Content-Type': 'application/json'} : undefined,
+            body: body ? JSON.stringify(body) : undefined
+        });
+        return readResponse(response);
+    }
+
+    async function login() {
+        try {
+            const data = await request('/api/auth/login', 'POST', {
+                username: document.getElementById('authUsername').value,
+                password: document.getElementById('authPassword').value
+            });
+            setOutput(data);
+            await syncAuthState();
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function me() {
+        try {
+            const data = await request('/api/auth/me');
+            setOutput(unwrapApiResponse(data));
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function logout() {
+        try {
+            await request('/api/auth/logout', 'POST');
+            setOutput('Logged out');
+            await syncAuthState();
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function createReservation() {
+        try {
+            const data = await request('/api/reservations', 'POST', {
+                plateNumber: document.getElementById('plateNumber').value,
+                vehicleType: document.getElementById('vehicleType').value,
+                startTime: document.getElementById('startTime').value,
+                endTime: document.getElementById('endTime').value,
+                zoneId: document.getElementById('zoneId').value ? Number(document.getElementById('zoneId').value) : null,
+                slotId: document.getElementById('slotId').value ? Number(document.getElementById('slotId').value) : null
+            });
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function cancelReservation() {
+        try {
+            const id = Number(document.getElementById('reservationId').value);
+            const data = await request(`/api/reservations/${id}`, 'DELETE');
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function getReservation() {
+        try {
+            const id = Number(document.getElementById('reservationId').value);
+            const data = await request(`/api/reservations/${id}`);
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function getMyReservations() {
+        try {
+            const data = await request('/api/reservations/me');
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function getAllReservations() {
+        try {
+            const data = await request('/api/reservations');
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function loadAvailability() {
+        try {
+            const buildingCode = document.getElementById('buildingCode').value.trim();
+            infraData = unwrapApiResponse(await request(`/api/reservations/availability?buildingCode=${encodeURIComponent(buildingCode)}`));
+            overview.value = JSON.stringify(infraData, null, 2);
+            renderAvailableOptions();
+            setOutput('Availability loaded');
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function syncAuthState() {
+        const roleHint = document.getElementById('roleHint');
+        const allReservationsBtn = document.getElementById('allReservationsBtn');
+        try {
+            const meData = await request('/api/auth/me');
+            const currentUser = unwrapApiResponse(meData);
+            const role = currentUser.role || currentUser.userRole || currentUser.authorities?.[0] || 'UNKNOWN';
+            roleHint.textContent = `Logged in as ${currentUser.username || 'user'} (${role})`;
+            const isManager = ['MANAGER', 'SYSTEM_ADMIN'].includes(String(role).replace('ROLE_', ''));
+            allReservationsBtn.style.display = isManager ? 'block' : 'none';
+        } catch {
+            roleHint.textContent = 'Not logged in';
+            allReservationsBtn.style.display = 'none';
+        }
+    }
+
+    function renderAvailableOptions() {
+        setDefaultReservationTimes();
+
+        if (!infraData) {
+            available.value = 'Load availability first.';
+            return;
+        }
+
+        const vehicleType = document.getElementById('vehicleType').value;
+
+        if (vehicleType === 'CAR') {
+            const slots = infraData.availableCarSlots || [];
+            const slotSelect = document.getElementById('carSlotSelect');
+            slotSelect.innerHTML = slots.map(slot => {
+                return `<option value="${slot.id}" data-zone-id="${slot.zoneId}">${slot.slotCode} | ${slot.zoneCode}</option>`;
+            }).join('');
+
+            document.getElementById('zoneId').value = slots[0] ? slots[0].zoneId : '';
+            document.getElementById('slotId').value = slots[0] ? slots[0].id : '';
+            document.getElementById('carSlotSelect').style.display = 'block';
+            document.getElementById('motorZoneSelect').style.display = 'none';
+
+            available.value = slots.length
+                ? slots.map(slot => `slotId=${slot.id} | ${slot.slotCode} | zone=${slot.zoneCode}`).join('\n')
+                : 'No available car slots in this building.';
+        } else {
+            const motorZones = infraData.availableMotorbikeZones || [];
+            const zoneSelect = document.getElementById('motorZoneSelect');
+            zoneSelect.innerHTML = motorZones.map(zone => {
+                return `<option value="${zone.id}">${zone.zoneCode} | left ${zone.availableCapacity}</option>`;
+            }).join('');
+
+            document.getElementById('zoneId').value = motorZones[0] ? motorZones[0].id : '';
+            document.getElementById('slotId').value = '';
+            document.getElementById('carSlotSelect').style.display = 'none';
+            document.getElementById('motorZoneSelect').style.display = 'block';
+
+            available.value = motorZones.length
+                ? motorZones.map(zone => `zoneId=${zone.id} | ${zone.zoneCode} | available=${zone.availableCapacity}`).join('\n')
+                : 'No available motorbike zones in this building.';
+        }
+    }
+
+    function selectCarSlot() {
+        const select = document.getElementById('carSlotSelect');
+        const option = select.options[select.selectedIndex];
+        if (!option) {
+            return;
+        }
+        document.getElementById('slotId').value = select.value;
+        document.getElementById('zoneId').value = option.dataset.zoneId || '';
+    }
+
+    function selectMotorZone() {
+        const select = document.getElementById('motorZoneSelect');
+        document.getElementById('zoneId').value = select.value;
+        document.getElementById('slotId').value = '';
+    }
+
+    document.getElementById('vehicleType').addEventListener('change', renderAvailableOptions);
+    document.getElementById('buildingCode').addEventListener('change', renderAvailableOptions);
+    setDefaultReservationTimes();
+    document.getElementById('carSlotSelect').style.display = 'none';
+    document.getElementById('motorZoneSelect').style.display = 'none';
+    syncAuthState();
+</script>
+</body>
+</html>

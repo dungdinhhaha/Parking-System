@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock AI Test</title>
+    <style>
+        :root { --bg:#f5f7fb; --card:#fff; --text:#102033; --muted:#5e6b7a; --primary:#1d4ed8; --border:#d9e2ec; --danger:#b91c1c; --ok:#047857; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:Arial, Helvetica, sans-serif; background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 45%,#eef2f7 100%); color:var(--text); }
+        .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 18px 48px; }
+        .topbar { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px; }
+        .links a { margin-right:12px; color:#1d4ed8; text-decoration:none; font-weight:700; }
+        .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; margin-top:18px; }
+        .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:0 10px 30px rgba(16,32,51,.06); }
+        label { display:block; font-size:13px; font-weight:700; margin:10px 0 6px; }
+        input, button { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; font-size:14px; }
+        button { background:var(--primary); color:#fff; border:0; font-weight:700; cursor:pointer; margin-top:10px; }
+        button.secondary { background:#475569; }
+        .result { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; min-height:220px; border-radius:12px; padding:12px; overflow:auto; }
+        .small { font-size:13px; color:var(--muted); }
+        .status { font-weight:700; color:var(--ok); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="topbar">
+        <div>
+            <h1 style="margin:0 0 8px;">Mock AI Plate Recognition Test</h1>
+            <div class="links">
+                <a href="/test-hub.html">Hub</a>
+                <a href="/session-flow-test.html">Session</a>
+            </div>
+        </div>
+        <div class="small">Use STAFF / MANAGER / SYSTEM_ADMIN.</div>
+    </div>
+    <div class="grid">
+        <div class="card">
+            <h2>Auth</h2>
+            <label>Username</label><input id="authUsername" value="staff">
+            <label>Password</label><input id="authPassword" type="password" value="staff123">
+            <button onclick="login()">Login</button>
+            <button class="secondary" onclick="me()">/me</button>
+            <button class="secondary" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Result</h2>
+            <div id="status" class="status">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+
+        <div class="card">
+            <h2>Recognize Mock</h2>
+            <label>Fallback Plate Number</label><input id="fallbackPlateNumber" value="51A-12345">
+            <label>Plate Image (optional)</label><input id="plateImage" type="file" accept="image/*">
+            <button onclick="recognize()">Recognize</button>
+            <div class="small">Nếu có ảnh, mock provider sẽ trả plate number mô phỏng theo file; nếu không có ảnh sẽ dùng fallback.</div>
+        </div>
+    </div>
+</div>
+
+<script src="/test-common.js"></script>
+<script>
+    const TC = window.ParkingTestCommon;
+    TC.bindOutput('result', 'status');
+
+    async function login() { try { TC.setOutput(await TC.login('authUsername', 'authPassword')); } catch (e) { TC.setOutput(e.message, false); } }
+    async function me() { try { TC.setOutput(await TC.me()); } catch (e) { TC.setOutput(e.message, false); } }
+    async function logout() { try { await TC.logout(); } catch (e) { TC.setOutput(e.message, false); } }
+
+    async function recognize() {
+        try {
+            const formData = new FormData();
+            formData.append('fallbackPlateNumber', document.getElementById('fallbackPlateNumber').value);
+            const file = document.getElementById('plateImage').files[0];
+            if (file) {
+                formData.append('plateImage', file);
+            }
+            const response = await fetch('/api/ai/plate-recognition/mock', {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+            const data = await TC.readResponse(response);
+            TC.setOutput(data);
+        } catch (e) {
+            TC.setOutput(e.message, false);
+        }
+    }
+</script>
+</body>
+</html>

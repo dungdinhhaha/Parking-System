@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Test</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --text: #102033;
+            --muted: #5e6b7a;
+            --primary: #1d4ed8;
+            --primary-dark: #173ea6;
+            --border: #d9e2ec;
+            --success: #047857;
+            --danger: #b91c1c;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 45%, #eef2f7 100%);
+            color: var(--text);
+        }
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 20px 48px;
+        }
+        h1 { margin: 0 0 8px; font-size: 32px; }
+        p { margin: 0 0 16px; color: var(--muted); }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(16, 32, 51, 0.06);
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        input, button {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            font-size: 14px;
+        }
+        input { margin-bottom: 12px; }
+        button {
+            background: var(--primary);
+            color: white;
+            border: 0;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        button:hover { background: var(--primary-dark); }
+        .secondary { background: #475569; }
+        .secondary:hover { background: #334155; }
+        .danger { background: var(--danger); }
+        .danger:hover { background: #991b1b; }
+        .row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+        }
+        .result {
+            min-height: 120px;
+            white-space: pre-wrap;
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            overflow: auto;
+        }
+        .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+        .status { font-weight: 700; color: var(--success); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Auth Test</h1>
+    <p>Trang test đăng nhập, đăng xuất và kiểm tra quyền theo session.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Login</h2>
+            <label for="username">Username</label>
+            <input id="username" type="text" placeholder="nhap username">
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="nhap password">
+            <button onclick="login()">Login</button>
+            <button class="secondary" onclick="me()">Check /me</button>
+            <button class="danger" onclick="logout()">Logout</button>
+            <div class="hint">Dùng cùng session của trình duyệt, không cần JWT.</div>
+        </div>
+
+        <div class="card">
+            <h2>Role Test</h2>
+            <div class="row">
+                <button onclick="callApi('/api/auth/test/manager')">MANAGER</button>
+                <button onclick="callApi('/api/auth/test/staff')">STAFF</button>
+                <button onclick="callApi('/api/auth/test/driver')">DRIVER</button>
+                <button onclick="callApi('/api/auth/test/system-admin')">SYSTEM_ADMIN</button>
+            </div>
+            <button class="secondary" onclick="callApi('/api/auth/test/me')">Authenticated Check</button>
+            <div class="hint">Nếu role không đúng, Spring Security sẽ trả 403.</div>
+        </div>
+
+        <div class="card">
+            <h2>Result</h2>
+            <div id="status" class="status">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    const result = document.getElementById('result');
+    const statusEl = document.getElementById('status');
+
+    function setOutput(message, ok = true) {
+        statusEl.textContent = ok ? 'OK' : 'ERROR';
+        statusEl.style.color = ok ? '#047857' : '#b91c1c';
+        result.textContent = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
+    }
+
+    function unwrapApiResponse(payload) {
+        return payload && typeof payload === 'object' && 'success' in payload && 'data' in payload
+            ? payload.data
+            : payload;
+    }
+
+    async function handleResponse(response) {
+        const text = await response.text();
+        if (!response.ok) {
+            throw new Error(`${response.status} ${response.statusText}\n${text}`);
+        }
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+
+    async function login() {
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            const data = await handleResponse(response);
+            setOutput(data);
+        } catch (error) {
+            setOutput(error.message, false);
+        }
+    }
+
+    async function me() {
+        try {
+            const response = await fetch('/api/auth/me', {
+                credentials: 'include'
+            });
+            const data = await handleResponse(response);
+            setOutput(unwrapApiResponse(data));
+        } catch (error) {
+            setOutput(error.message, false);
+        }
+    }
+
+    async function logout() {
+        try {
+            const response = await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            if (!response.ok && response.status !== 204) {
+                throw new Error(`${response.status} ${response.statusText}`);
+            }
+            setOutput('Logged out');
+        } catch (error) {
+            setOutput(error.message, false);
+        }
+    }
+
+    async function callApi(path) {
+        try {
+            const response = await fetch(path, {
+                credentials: 'include'
+            });
+            const data = await handleResponse(response);
+            setOutput(unwrapApiResponse(data));
+        } catch (error) {
+            setOutput(error.message, false);
+        }
+    }
+</script>
+</body>
+</html>

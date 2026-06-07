@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management Test</title>
+    <style>
+        :root { --bg:#f5f7fb; --card:#fff; --text:#102033; --muted:#5e6b7a; --primary:#1d4ed8; --border:#d9e2ec; --danger:#b91c1c; --ok:#047857; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:Arial, Helvetica, sans-serif; background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 45%,#eef2f7 100%); color:var(--text); }
+        .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 18px 48px; }
+        .topbar { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px; }
+        .links a { margin-right:12px; color:#1d4ed8; text-decoration:none; font-weight:700; }
+        .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; margin-top:18px; }
+        .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:0 10px 30px rgba(16,32,51,.06); }
+        label { display:block; font-size:13px; font-weight:700; margin:10px 0 6px; }
+        input, select, button { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; font-size:14px; }
+        button { background:var(--primary); color:#fff; border:0; font-weight:700; cursor:pointer; margin-top:10px; }
+        button.secondary { background:#475569; }
+        button.danger { background:var(--danger); }
+        .result { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; min-height:200px; border-radius:12px; padding:12px; overflow:auto; }
+        .small { font-size:13px; color:var(--muted); }
+        .status { font-weight:700; color:var(--ok); }
+        .inline { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="topbar">
+        <div>
+            <h1 style="margin:0 0 8px;">User Management Test</h1>
+            <div class="links">
+                <a href="/test-hub.html">Hub</a>
+                <a href="/auth-test.html">Auth</a>
+                <a href="/vehicle-test.html">Vehicle</a>
+            </div>
+        </div>
+        <div class="small">Use `manager` or `admin` for most actions.</div>
+    </div>
+    <div class="grid">
+        <div class="card">
+            <h2>Auth</h2>
+            <label>Username</label><input id="authUsername" value="admin">
+            <label>Password</label><input id="authPassword" type="password" value="admin123">
+            <button onclick="login()">Login</button>
+            <button class="secondary" onclick="me()">/me</button>
+            <button class="danger" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Result</h2>
+            <div id="status" class="status">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+
+        <div class="card">
+            <h2>Create / Update</h2>
+            <label>User ID (for update)</label><input id="userId" type="number" placeholder="Leave blank for create">
+            <div class="inline">
+                <div><label>Full name</label><input id="fullName" value="New User"></div>
+                <div><label>Username</label><input id="username" value="newuser"></div>
+            </div>
+            <div class="inline">
+                <div><label>Password</label><input id="password" type="password" value="newuser123"></div>
+                <div><label>Phone</label><input id="phone" value="0900000000"></div>
+            </div>
+            <label>Email</label><input id="email" value="newuser@example.com">
+            <div class="inline">
+                <div>
+                    <label>Role</label>
+                    <select id="role">
+                        <option value="DRIVER">DRIVER</option>
+                        <option value="STAFF">STAFF</option>
+                        <option value="MANAGER">MANAGER</option>
+                        <option value="SYSTEM_ADMIN">SYSTEM_ADMIN</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Status</label>
+                    <select id="statusValue">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                        <option value="LOCKED">LOCKED</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="createUser()">Create</button>
+            <button class="secondary" onclick="updateUser()">Update</button>
+        </div>
+
+        <div class="card">
+            <h2>Lookup</h2>
+            <label>User ID</label><input id="lookupUserId" type="number">
+            <button onclick="getUser()">Get</button>
+            <button class="secondary" onclick="getAllUsers()">Get All</button>
+            <button class="secondary" onclick="updateStatus()">Toggle Status</button>
+            <label>New Password</label><input id="newPassword" type="password" value="changed123">
+            <button class="secondary" onclick="updatePassword()">Change Password</button>
+        </div>
+    </div>
+</div>
+
+<script src="/test-common.js"></script>
+<script>
+    const TC = window.ParkingTestCommon;
+    TC.bindOutput('result', 'status');
+
+    async function login() { try { TC.setOutput(await TC.login('authUsername', 'authPassword')); } catch (e) { TC.setOutput(e.message, false); } }
+    async function me() { try { TC.setOutput(await TC.me()); } catch (e) { TC.setOutput(e.message, false); } }
+    async function logout() { try { await TC.logout(); } catch (e) { TC.setOutput(e.message, false); } }
+
+    function basePayload() {
+        return {
+            fullName: document.getElementById('fullName').value,
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            role: document.getElementById('role').value,
+            status: document.getElementById('statusValue').value
+        };
+    }
+
+    async function createUser() {
+        try { TC.setOutput(await TC.request('/api/users', 'POST', basePayload())); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function updateUser() {
+        try { TC.setOutput(await TC.request(`/api/users/${document.getElementById('userId').value}`, 'PUT', basePayload())); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getUser() {
+        try { TC.setOutput(await TC.request(`/api/users/${document.getElementById('lookupUserId').value}`)); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getAllUsers() {
+        try { TC.setOutput(await TC.request('/api/users')); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function updateStatus() {
+        try {
+            const current = document.getElementById('statusValue').value;
+            const next = current === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
+            TC.setOutput(await TC.request(`/api/users/${document.getElementById('lookupUserId').value}/status`, 'PATCH', {status: next}));
+        } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function updatePassword() {
+        try { TC.setOutput(await TC.request(`/api/users/${document.getElementById('lookupUserId').value}/password`, 'PATCH', {newPassword: document.getElementById('newPassword').value})); } catch (e) { TC.setOutput(e.message, false); }
+    }
+</script>
+</body>
+</html>

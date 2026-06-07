@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infra Test</title>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --text: #102033;
+            --muted: #5e6b7a;
+            --primary: #1d4ed8;
+            --border: #d9e2ec;
+            --danger: #b91c1c;
+            --ok: #047857;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 45%, #eef2f7 100%);
+            color: var(--text);
+        }
+        .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 18px 48px; }
+        h1 { margin: 0 0 8px; }
+        p { color: var(--muted); margin-top: 0; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(16, 32, 51, 0.06);
+        }
+        h2 { margin-top: 0; font-size: 18px; }
+        label { display: block; font-size: 13px; font-weight: 700; margin: 10px 0 6px; }
+        input, select, button, textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 14px;
+        }
+        textarea { min-height: 140px; resize: vertical; font-family: Consolas, monospace; }
+        button {
+            background: var(--primary);
+            color: white;
+            border: 0;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button.secondary { background: #475569; }
+        button.danger { background: var(--danger); }
+        .inline { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .result {
+            white-space: pre-wrap;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 160px;
+            border-radius: 12px;
+            padding: 12px;
+            overflow: auto;
+        }
+        .small { font-size: 13px; color: var(--muted); }
+        .status { font-weight: 700; color: var(--ok); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Infrastructure API Test</h1>
+    <p>Login trước bằng session, sau đó dùng trang này để test nhanh Building, Floor, Zone, Slot.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Auth</h2>
+            <label>Username</label>
+            <input id="authUsername" placeholder="manager">
+            <label>Password</label>
+            <input id="authPassword" type="password" placeholder="manager123">
+            <button onclick="login()">Login</button>
+            <button class="secondary" onclick="me()">Check /me</button>
+            <button class="danger" onclick="logout()">Logout</button>
+            <div class="small">Trang này dùng session, không cần JWT.</div>
+        </div>
+
+        <div class="card">
+            <h2>Result</h2>
+            <div id="status" class="status">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+
+        <div class="card">
+            <h2>Building</h2>
+            <label>Building Code</label>
+            <input id="buildingCode" value="BLD-001">
+            <label>Name</label>
+            <input id="buildingName" value="Central Parking">
+            <label>Address</label>
+            <input id="buildingAddress" value="123 Main Street, District 1">
+            <div class="inline">
+                <div>
+                    <label>Open Time</label>
+                    <input id="buildingOpen" type="time" value="05:00">
+                </div>
+                <div>
+                    <label>Close Time</label>
+                    <input id="buildingClose" type="time" value="23:00">
+                </div>
+            </div>
+            <button onclick="createBuilding()">Create Building</button>
+            <button class="secondary" onclick="list('/api/buildings')">List Buildings</button>
+        </div>
+
+        <div class="card">
+            <h2>Floor</h2>
+            <label>Building ID</label>
+            <input id="floorBuildingId" type="number" placeholder="1">
+            <label>Floor Code</label>
+            <input id="floorCode" value="B1">
+            <label>Name</label>
+            <input id="floorName" value="Basement 1">
+            <button onclick="createFloor()">Create Floor</button>
+            <button class="secondary" onclick="list('/api/floors')">List Floors</button>
+        </div>
+
+        <div class="card">
+            <h2>Zone</h2>
+            <label>Floor ID</label>
+            <input id="zoneFloorId" type="number" placeholder="1">
+            <label>Zone Code</label>
+            <input id="zoneCode" value="B1-CAR">
+            <label>Type</label>
+            <select id="zoneType">
+                <option value="CAR">CAR</option>
+                <option value="MOTORBIKE">MOTORBIKE</option>
+            </select>
+            <label>Capacity</label>
+            <input id="zoneCapacity" type="number" value="20">
+            <button onclick="createZone()">Create Zone</button>
+            <button class="secondary" onclick="list('/api/zones')">List Zones</button>
+        </div>
+
+        <div class="card">
+            <h2>Slot</h2>
+            <label>Zone ID</label>
+            <input id="slotZoneId" type="number" placeholder="1">
+            <label>Slot Code</label>
+            <input id="slotCode" value="C1">
+            <label>Type</label>
+            <select id="slotType">
+                <option value="CAR">CAR</option>
+                <option value="MOTORBIKE">MOTORBIKE</option>
+            </select>
+            <label>Distance From Gate</label>
+            <input id="slotDistance" type="number" step="0.1" value="12.5">
+            <button onclick="createSlot()">Create Slot</button>
+            <button class="secondary" onclick="list('/api/slots')">List Slots</button>
+        </div>
+
+        <div class="card">
+            <h2>Quick Seed View</h2>
+            <button class="secondary" onclick="loadSeedOverview()">Load Seed Overview</button>
+            <textarea id="overview" readonly></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    const result = document.getElementById('result');
+    const statusEl = document.getElementById('status');
+    const overview = document.getElementById('overview');
+
+    function setOutput(value, ok = true) {
+        statusEl.textContent = ok ? 'OK' : 'ERROR';
+        statusEl.style.color = ok ? '#047857' : '#b91c1c';
+        result.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    }
+
+    function unwrapApiResponse(payload) {
+        return payload && typeof payload === 'object' && 'success' in payload && 'data' in payload
+            ? payload.data
+            : payload;
+    }
+
+    async function readResponse(response) {
+        const text = await response.text();
+        if (!response.ok) {
+            throw new Error(`${response.status} ${response.statusText}\n${text}`);
+        }
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+
+    async function request(path, method = 'GET', body) {
+        const response = await fetch(path, {
+            method,
+            credentials: 'include',
+            headers: body ? {'Content-Type': 'application/json'} : undefined,
+            body: body ? JSON.stringify(body) : undefined
+        });
+        return readResponse(response);
+    }
+
+    async function login() {
+        try {
+            const data = await request('/api/auth/login', 'POST', {
+                username: document.getElementById('authUsername').value,
+                password: document.getElementById('authPassword').value
+            });
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function me() {
+        try {
+            const data = await request('/api/auth/me');
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function logout() {
+        try {
+            await request('/api/auth/logout', 'POST');
+            setOutput('Logged out');
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function createBuilding() {
+        try {
+            const data = await request('/api/buildings', 'POST', {
+                buildingCode: document.getElementById('buildingCode').value,
+                name: document.getElementById('buildingName').value,
+                address: document.getElementById('buildingAddress').value,
+                openTime: document.getElementById('buildingOpen').value || null,
+                closeTime: document.getElementById('buildingClose').value || null,
+                status: 'OPEN',
+                description: 'Seed via infra-test.html'
+            });
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function createFloor() {
+        try {
+            const data = await request('/api/floors', 'POST', {
+                buildingId: Number(document.getElementById('floorBuildingId').value),
+                floorCode: document.getElementById('floorCode').value,
+                name: document.getElementById('floorName').value,
+                description: 'Seed via infra-test.html'
+            });
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function createZone() {
+        try {
+            const data = await request('/api/zones', 'POST', {
+                floorId: Number(document.getElementById('zoneFloorId').value),
+                zoneCode: document.getElementById('zoneCode').value,
+                name: document.getElementById('zoneCode').value,
+                vehicleType: document.getElementById('zoneType').value,
+                capacity: Number(document.getElementById('zoneCapacity').value),
+                status: 'AVAILABLE'
+            });
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function createSlot() {
+        try {
+            const data = await request('/api/slots', 'POST', {
+                zoneId: Number(document.getElementById('slotZoneId').value),
+                slotCode: document.getElementById('slotCode').value,
+                vehicleType: document.getElementById('slotType').value,
+                distanceFromGate: Number(document.getElementById('slotDistance').value),
+                status: 'AVAILABLE'
+            });
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function list(path) {
+        try {
+            const data = await request(path);
+            setOutput(data);
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function loadSeedOverview() {
+        try {
+            const [buildings, floors, zones, slots] = await Promise.all([
+                request('/api/buildings').then(unwrapApiResponse),
+                request('/api/floors').then(unwrapApiResponse),
+                request('/api/zones').then(unwrapApiResponse),
+                request('/api/slots').then(unwrapApiResponse)
+            ]);
+            overview.value = JSON.stringify({buildings, floors, zones, slots}, null, 2);
+            setOutput('Seed overview loaded');
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+</script>
+</body>
+</html>

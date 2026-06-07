@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking System Test Hub</title>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #fff;
+            --text: #102033;
+            --muted: #5e6b7a;
+            --primary: #1d4ed8;
+            --border: #d9e2ec;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 45%, #eef2f7 100%);
+            color: var(--text);
+        }
+        .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 18px 48px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(16, 32, 51, 0.06);
+        }
+        a {
+            display: block;
+            padding: 12px 14px;
+            margin-top: 10px;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        p { color: var(--muted); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Parking System Test Hub</h1>
+    <p>Mở các trang test tính năng từ một chỗ. Dùng trên <code>http://localhost:8080</code>, không mở bằng <code>file://</code>.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Core</h2>
+            <a href="/auth-test.html">Auth Test</a>
+            <a href="/infra-test.html">Infrastructure Test</a>
+            <a href="/reservation-test.html">Reservation Test</a>
+            <a href="/session-flow-test.html">Session Flow Test</a>
+        </div>
+        <div class="card">
+            <h2>New modules</h2>
+            <a href="/user-test.html">User Management Test</a>
+            <a href="/vehicle-test.html">Vehicle Management Test</a>
+            <a href="/payment-test.html">Payment Test</a>
+            <a href="/incident-test.html">Incident Test</a>
+            <a href="/report-test.html">Report Test</a>
+            <a href="/ai-test.html">Mock AI Test</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Management Test</title>
+    <style>
+        :root { --bg:#f5f7fb; --card:#fff; --text:#102033; --muted:#5e6b7a; --primary:#1d4ed8; --border:#d9e2ec; --danger:#b91c1c; --ok:#047857; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:Arial, Helvetica, sans-serif; background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 45%,#eef2f7 100%); color:var(--text); }
+        .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 18px 48px; }
+        .topbar { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px; }
+        .links a { margin-right:12px; color:#1d4ed8; text-decoration:none; font-weight:700; }
+        .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; margin-top:18px; }
+        .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:0 10px 30px rgba(16,32,51,.06); }
+        label { display:block; font-size:13px; font-weight:700; margin:10px 0 6px; }
+        input, select, button { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; font-size:14px; }
+        button { background:var(--primary); color:#fff; border:0; font-weight:700; cursor:pointer; margin-top:10px; }
+        button.secondary { background:#475569; }
+        button.danger { background:var(--danger); }
+        .result { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; min-height:200px; border-radius:12px; padding:12px; overflow:auto; }
+        .small { font-size:13px; color:var(--muted); }
+        .status { font-weight:700; color:var(--ok); }
+        .inline { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="topbar">
+        <div>
+            <h1 style="margin:0 0 8px;">Vehicle Management Test</h1>
+            <div class="links">
+                <a href="/test-hub.html">Hub</a>
+                <a href="/auth-test.html">Auth</a>
+                <a href="/user-test.html">User</a>
+            </div>
+        </div>
+        <div class="small">Drivers can manage their own vehicles. Managers/admins can see all.</div>
+    </div>
+    <div class="grid">
+        <div class="card">
+            <h2>Auth</h2>
+            <label>Username</label><input id="authUsername" value="driver">
+            <label>Password</label><input id="authPassword" type="password" value="driver123">
+            <button onclick="login()">Login</button>
+            <button class="secondary" onclick="me()">/me</button>
+            <button class="danger" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Result</h2>
+            <div id="status" class="status">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+
+        <div class="card">
+            <h2>Create / Update</h2>
+            <label>Vehicle ID (for update)</label><input id="vehicleId" type="number" placeholder="Leave blank for create">
+            <label>Owner ID (optional, manager/admin only)</label><input id="ownerId" type="number" placeholder="Leave blank to use current user">
+            <div class="inline">
+                <div><label>Plate number</label><input id="plateNumber" value="51A-12345"></div>
+                <div>
+                    <label>Vehicle type</label>
+                    <select id="vehicleType">
+                        <option value="CAR">CAR</option>
+                        <option value="MOTORBIKE">MOTORBIKE</option>
+                    </select>
+                </div>
+            </div>
+            <div class="inline">
+                <div><label>Color</label><input id="color" value="Black"></div>
+                <div><label>Brand</label><input id="brand" value="Toyota"></div>
+            </div>
+            <button onclick="createVehicle()">Create</button>
+            <button class="secondary" onclick="updateVehicle()">Update</button>
+        </div>
+
+        <div class="card">
+            <h2>Lookup</h2>
+            <label>Vehicle ID</label><input id="lookupVehicleId" type="number">
+            <button onclick="getVehicle()">Get</button>
+            <button class="secondary" onclick="getMyVehicles()">Get My Vehicles</button>
+            <button class="secondary" onclick="getAllVehicles()">Get All</button>
+            <button class="danger" onclick="deleteVehicle()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script src="/test-common.js"></script>
+<script>
+    const TC = window.ParkingTestCommon;
+    TC.bindOutput('result', 'status');
+
+    async function login() { try { TC.setOutput(await TC.login('authUsername', 'authPassword')); } catch (e) { TC.setOutput(e.message, false); } }
+    async function me() { try { TC.setOutput(await TC.me()); } catch (e) { TC.setOutput(e.message, false); } }
+    async function logout() { try { await TC.logout(); } catch (e) { TC.setOutput(e.message, false); } }
+
+    function payload() {
+        const ownerId = document.getElementById('ownerId').value.trim();
+        return {
+            plateNumber: document.getElementById('plateNumber').value,
+            vehicleType: document.getElementById('vehicleType').value,
+            color: document.getElementById('color').value,
+            brand: document.getElementById('brand').value,
+            ownerId: ownerId ? Number(ownerId) : null
+        };
+    }
+
+    async function createVehicle() {
+        try { TC.setOutput(await TC.request('/api/vehicles', 'POST', payload())); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function updateVehicle() {
+        try { TC.setOutput(await TC.request(`/api/vehicles/${document.getElementById('vehicleId').value}`, 'PUT', payload())); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getVehicle() {
+        try { TC.setOutput(await TC.request(`/api/vehicles/${document.getElementById('lookupVehicleId').value}`)); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getMyVehicles() {
+        try { TC.setOutput(await TC.request('/api/vehicles/me')); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getAllVehicles() {
+        try { TC.setOutput(await TC.request('/api/vehicles')); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function deleteVehicle() {
+        try { TC.setOutput(await TC.request(`/api/vehicles/${document.getElementById('lookupVehicleId').value}`, 'DELETE')); } catch (e) { TC.setOutput(e.message, false); }
+    }
+</script>
+</body>
+</html>

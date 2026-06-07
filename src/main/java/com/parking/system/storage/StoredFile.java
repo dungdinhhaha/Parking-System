@@ -1,0 +1,14 @@
+package com.parking.system.storage;
+
+import lombok.Builder;
+import lombok.Getter;
+
+@Getter
+@Builder
+public class StoredFile {
+    private final String storagePath;
+    private final String publicUrl;
+    private final String originalFileName;
+    private final String contentType;
+    private final long size;
+}

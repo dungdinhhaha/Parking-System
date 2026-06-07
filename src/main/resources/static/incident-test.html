@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Test</title>
+    <style>
+        :root { --bg:#f5f7fb; --card:#fff; --text:#102033; --muted:#5e6b7a; --primary:#1d4ed8; --border:#d9e2ec; --danger:#b91c1c; --ok:#047857; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:Arial, Helvetica, sans-serif; background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 45%,#eef2f7 100%); color:var(--text); }
+        .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 18px 48px; }
+        .topbar { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px; }
+        .links a { margin-right:12px; color:#1d4ed8; text-decoration:none; font-weight:700; }
+        .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; margin-top:18px; }
+        .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; box-shadow:0 10px 30px rgba(16,32,51,.06); }
+        label { display:block; font-size:13px; font-weight:700; margin:10px 0 6px; }
+        input, select, button, textarea { width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 12px; font-size:14px; }
+        textarea { min-height:120px; resize:vertical; }
+        button { background:var(--primary); color:#fff; border:0; font-weight:700; cursor:pointer; margin-top:10px; }
+        button.secondary { background:#475569; }
+        button.danger { background:var(--danger); }
+        .result { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; min-height:200px; border-radius:12px; padding:12px; overflow:auto; }
+        .small { font-size:13px; color:var(--muted); }
+        .status { font-weight:700; color:var(--ok); }
+        .inline { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="topbar">
+        <div>
+            <h1 style="margin:0 0 8px;">Incident Test</h1>
+            <div class="links">
+                <a href="/test-hub.html">Hub</a>
+                <a href="/session-flow-test.html">Session</a>
+                <a href="/payment-test.html">Payment</a>
+            </div>
+        </div>
+        <div class="small">Use STAFF / MANAGER / SYSTEM_ADMIN.</div>
+    </div>
+    <div class="grid">
+        <div class="card">
+            <h2>Auth</h2>
+            <label>Username</label><input id="authUsername" value="staff">
+            <label>Password</label><input id="authPassword" type="password" value="staff123">
+            <button onclick="login()">Login</button>
+            <button class="secondary" onclick="me()">/me</button>
+            <button class="danger" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Result</h2>
+            <div id="status" class="status">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+
+        <div class="card">
+            <h2>Create Incident</h2>
+            <label>Parking Session ID</label><input id="parkingSessionId" type="number">
+            <label>Incident Type</label>
+            <select id="incidentType">
+                <option value="LOST_TICKET">LOST_TICKET</option>
+                <option value="WRONG_PLATE">WRONG_PLATE</option>
+                <option value="OVERDUE">OVERDUE</option>
+                <option value="WRONG_ZONE">WRONG_ZONE</option>
+                <option value="UNPAID">UNPAID</option>
+                <option value="OTHER">OTHER</option>
+            </select>
+            <label>Description</label>
+            <textarea id="description">Sample incident</textarea>
+            <label>Plate Recognition Log ID (optional)</label><input id="plateRecognitionLogId" type="number">
+            <label>Resolution Note (optional)</label><input id="resolutionNote" value="Need manual review">
+            <button onclick="createIncident()">Create</button>
+        </div>
+
+        <div class="card">
+            <h2>Resolve / Lookup</h2>
+            <label>Incident ID</label><input id="incidentId" type="number">
+            <button onclick="closeIncident()">Close</button>
+            <label>Filter Status (optional)</label>
+            <select id="filterStatus">
+                <option value="">ALL</option>
+                <option value="OPEN">OPEN</option>
+                <option value="PROCESSING">PROCESSING</option>
+                <option value="RESOLVED">RESOLVED</option>
+                <option value="CANCELLED">CANCELLED</option>
+            </select>
+            <button class="secondary" onclick="getIncident()">Get by ID</button>
+            <button class="secondary" onclick="getAllIncidents()">Get All</button>
+            <button class="secondary" onclick="getBySession()">Get by Session</button>
+        </div>
+    </div>
+</div>
+
+<script src="/test-common.js"></script>
+<script>
+    const TC = window.ParkingTestCommon;
+    TC.bindOutput('result', 'status');
+
+    async function login() { try { TC.setOutput(await TC.login('authUsername', 'authPassword')); } catch (e) { TC.setOutput(e.message, false); } }
+    async function me() { try { TC.setOutput(await TC.me()); } catch (e) { TC.setOutput(e.message, false); } }
+    async function logout() { try { await TC.logout(); } catch (e) { TC.setOutput(e.message, false); } }
+
+    function payload() {
+        const logId = document.getElementById('plateRecognitionLogId').value.trim();
+        return {
+            parkingSessionId: Number(document.getElementById('parkingSessionId').value),
+            incidentType: document.getElementById('incidentType').value,
+            description: document.getElementById('description').value,
+            plateRecognitionLogId: logId ? Number(logId) : null,
+            resolutionNote: document.getElementById('resolutionNote').value
+        };
+    }
+
+    async function createIncident() {
+        try { TC.setOutput(await TC.request('/api/incidents', 'POST', payload())); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function closeIncident() {
+        try { TC.setOutput(await TC.request(`/api/incidents/${document.getElementById('incidentId').value}/close`, 'PATCH', {resolutionNote: document.getElementById('resolutionNote').value})); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getIncident() {
+        try { TC.setOutput(await TC.request(`/api/incidents/${document.getElementById('incidentId').value}`)); } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getAllIncidents() {
+        try {
+            const filter = document.getElementById('filterStatus').value;
+            const path = filter ? `/api/incidents?status=${encodeURIComponent(filter)}` : '/api/incidents';
+            TC.setOutput(await TC.request(path));
+        } catch (e) { TC.setOutput(e.message, false); }
+    }
+    async function getBySession() {
+        try { TC.setOutput(await TC.request(`/api/incidents/session/${document.getElementById('parkingSessionId').value}`)); } catch (e) { TC.setOutput(e.message, false); }
+    }
+</script>
+</body>
+</html>
