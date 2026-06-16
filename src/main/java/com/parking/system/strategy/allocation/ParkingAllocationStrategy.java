@@ -1,5 +1,8 @@
 package com.parking.system.strategy.allocation;
 
+import com.parking.system.enums.VehicleType;
+
 public interface ParkingAllocationStrategy {
-    // TODO: allocate parking resource
+    VehicleType supports();
+    AllocationResult allocate(AllocationRequest request);
 }
