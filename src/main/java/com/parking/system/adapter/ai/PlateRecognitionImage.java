@@ -1,5 +1,6 @@
 package com.parking.system.adapter.ai;
 
-public record PlateRecognitionImage() {
-    // TODO: image wrapper for recognition
+import org.springframework.web.multipart.MultipartFile;
+
+public record PlateRecognitionImage(MultipartFile file) {
 }

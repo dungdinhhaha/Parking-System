@@ -1,5 +1,12 @@
 package com.parking.system.adapter.ai;
 
-public record PlateRecognitionResult() {
-    // TODO: recognition output
+import lombok.Builder;
+import lombok.Getter;
+
+@Getter
+@Builder
+public class PlateRecognitionResult {
+    private final String plateNumber;
+    private final Double confidence;
+    private final String provider;
 }

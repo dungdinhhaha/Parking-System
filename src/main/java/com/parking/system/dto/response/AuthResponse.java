@@ -1,4 +1,12 @@
 package com.parking.system.dto.response;
 
-public record AuthResponse(Long userId, String username, String role) {
+import lombok.Builder;
+import lombok.Getter;
+
+@Getter
+@Builder
+public class AuthResponse {
+    private final Long userId;
+    private final String username;
+    private final String role;
 }
