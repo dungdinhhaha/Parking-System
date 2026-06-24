@@ -62,3 +62,4 @@ public class ReservationController {
         return ApiResponse.success(reservationService.getAvailability(buildingCode));
     }
 }
+// Edited by Codex

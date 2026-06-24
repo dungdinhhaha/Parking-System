@@ -45,3 +45,4 @@ public class ReservationServiceImpl implements ReservationService {
         return reservationFacade.getAvailability(buildingCode);
     }
 }
+// Edited by Codex
