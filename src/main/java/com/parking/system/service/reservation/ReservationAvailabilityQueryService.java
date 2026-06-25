@@ -52,3 +52,4 @@ public class ReservationAvailabilityQueryService {
         return reservationMapper.toAvailabilityResponse(building, availableCarSlots, availableMotorbikeZones);
     }
 }
+// Edited by Codex

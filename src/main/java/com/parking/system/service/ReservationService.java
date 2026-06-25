@@ -13,3 +13,4 @@ public interface ReservationService {
     List<ReservationResponse> getAll();
     ReservationAvailabilityResponse getAvailability(String buildingCode);
 }
+// Edited by Codex

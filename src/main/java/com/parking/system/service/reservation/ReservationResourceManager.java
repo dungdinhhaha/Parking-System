@@ -20,14 +20,20 @@ public class ReservationResourceManager {
     public void release(Reservation reservation) {
         ParkingSlot slot = reservation.getAssignedSlot();
         if (slot != null && slot.isReserved()) {
-            slot.release();
-            parkingSlotRepository.save(slot);
+            ParkingSlot lockedSlot = parkingSlotRepository.findByIdForUpdate(slot.getId()).orElse(null);
+            if (lockedSlot != null && lockedSlot.isReserved()) {
+                lockedSlot.release();
+                parkingSlotRepository.save(lockedSlot);
+            }
         }
 
         ParkingZone zone = reservation.getAssignedZone();
         if (zone != null && slot == null) {
-            zone.decreaseReservedCount();
-            parkingZoneRepository.save(zone);
+            ParkingZone lockedZone = parkingZoneRepository.findByIdForUpdate(zone.getId()).orElse(null);
+            if (lockedZone != null) {
+                lockedZone.decreaseReservedCount();
+                parkingZoneRepository.save(lockedZone);
+            }
         }
     }
 }

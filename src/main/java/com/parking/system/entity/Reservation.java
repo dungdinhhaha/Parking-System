@@ -83,3 +83,4 @@ public class Reservation extends BaseEntity {
         status = ReservationStatus.USED;
     }
 }
+// Edited by Codex

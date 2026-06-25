@@ -16,3 +16,4 @@ public class ReservationAvailabilityResponse {
     private Long motorbikeZoneCount;
     private VehicleType selectedVehicleType;
 }
+// Edited by Codex

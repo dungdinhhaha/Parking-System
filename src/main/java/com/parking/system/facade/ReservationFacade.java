@@ -6,6 +6,7 @@ import com.parking.system.dto.response.ReservationResponse;
 import com.parking.system.entity.Reservation;
 import com.parking.system.entity.User;
 import com.parking.system.enums.ReservationStatus;
+import com.parking.system.enums.UserRole;
 import com.parking.system.exception.BusinessException;
 import com.parking.system.repository.ReservationRepository;
 import com.parking.system.repository.UserRepository;
@@ -96,9 +97,12 @@ public class ReservationFacade {
     }
 
     private Reservation getOwnedReservation(String username, Long reservationId) {
+        User currentUser = getUser(username);
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException("Reservation not found"));
-        if (!reservation.getUser().getUsername().equalsIgnoreCase(username)) {
+        if (currentUser.getRole() != UserRole.MANAGER
+                && currentUser.getRole() != UserRole.SYSTEM_ADMIN
+                && !reservation.getUser().getUsername().equalsIgnoreCase(username)) {
             throw new BusinessException("Access denied");
         }
         return reservation;
