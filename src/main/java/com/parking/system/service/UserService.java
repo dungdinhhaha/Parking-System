@@ -8,10 +8,10 @@ import com.parking.system.dto.response.UserResponse;
 import java.util.List;
 
 public interface UserService {
-    UserResponse create(CreateUserRequest request);
-    UserResponse update(Long id, UpdateUserRequest request);
+    UserResponse create(String actorUsername, CreateUserRequest request);
+    UserResponse update(String actorUsername, Long id, UpdateUserRequest request);
     UserResponse get(Long id);
     List<UserResponse> getAll();
-    UserResponse updateStatus(Long id, UpdateUserStatusRequest request);
-    UserResponse updatePassword(Long id, UpdateUserPasswordRequest request);
+    UserResponse updateStatus(String actorUsername, Long id, UpdateUserStatusRequest request);
+    UserResponse updatePassword(String actorUsername, Long id, UpdateUserPasswordRequest request);
 }
