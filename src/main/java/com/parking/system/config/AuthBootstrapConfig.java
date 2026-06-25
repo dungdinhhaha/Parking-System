@@ -42,7 +42,8 @@ public class AuthBootstrapConfig {
                     new SeedUser("manager", "Manager User", "manager@parking.local", "0900000001", UserRole.MANAGER, "manager123"),
                     new SeedUser("staff", "Staff User", "staff@parking.local", "0900000002", UserRole.STAFF, "staff123"),
                     new SeedUser("driver", "Driver User", "driver@parking.local", "0900000003", UserRole.DRIVER, "driver123"),
-                    new SeedUser("admin", "System Admin", "admin@parking.local", "0900000004", UserRole.SYSTEM_ADMIN, "admin123")
+                    new SeedUser("admin", "System Admin", "admin@parking.local", "0900000004", UserRole.SYSTEM_ADMIN, "admin123"),
+                    new SeedUser("system_admin", "System Administrator", "system-admin@parking.local", "0900000005", UserRole.SYSTEM_ADMIN, "admin123")
             );
 
             for (SeedUser seedUser : seedUsers) {
