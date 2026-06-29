@@ -2,8 +2,8 @@ package com.parking.system.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parking.system.dto.response.ApiErrorResponse;
-import lombok.RequiredArgsConstructor;
 import java.io.IOException;
+import java.time.Instant;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
@@ -24,11 +24,15 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final ObjectProvider<ObjectMapper> objectMapperProvider;
+
+    public SecurityConfig(UserDetailsService userDetailsService, ObjectProvider<ObjectMapper> objectMapperProvider) {
+        this.userDetailsService = userDetailsService;
+        this.objectMapperProvider = objectMapperProvider;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -69,12 +73,12 @@ public class SecurityConfig {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
         ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        response.getWriter().write(objectMapper.writeValueAsString(ApiErrorResponse.builder()
-                .timestamp(java.time.Instant.now())
-                .status(status)
-                .error(error)
-                .message(message)
-                .path(request.getRequestURI())
-                .build()));
+        response.getWriter().write(objectMapper.writeValueAsString(new ApiErrorResponse(
+                Instant.now().toString(),
+                status,
+                error,
+                message,
+                request.getRequestURI()
+        )));
     }
 }
