@@ -1,7 +1,7 @@
-package com.parking.system.service.checkout;
+﻿package com.parking.system.service.checkout;
 
-import com.parking.system.entity.ParkingIncident;
 import com.parking.system.entity.ParkingSession;
+import com.parking.system.entity.ParkingIncident;
 import com.parking.system.entity.User;
 import com.parking.system.enums.IncidentStatus;
 import com.parking.system.enums.IncidentType;

@@ -1,4 +1,4 @@
-package com.parking.system.service.lifecycle;
+﻿package com.parking.system.service.lifecycle;
 
 import com.parking.system.entity.ParkingSlot;
 import com.parking.system.entity.ParkingSubscription;
