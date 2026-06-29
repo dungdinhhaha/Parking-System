@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Test</title>
+    <style>
+        :root {
+            --bg: #eef3fb;
+            --card: #fff;
+            --text: #102033;
+            --muted: #64748b;
+            --primary: #1d4ed8;
+            --danger: #b91c1c;
+            --border: #d9e2ec;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(180deg, #ecf4ff 0%, var(--bg) 45%, #edf2f7 100%);
+            color: var(--text);
+        }
+        .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 40px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        }
+        label { display: block; font-size: 13px; font-weight: 700; margin: 10px 0 6px; }
+        input, select, button, textarea {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            padding: 11px 12px;
+            font-size: 14px;
+        }
+        button {
+            border: 0;
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        button.secondary { background: #475569; }
+        button.danger { background: var(--danger); }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .result {
+            min-height: 220px;
+            white-space: pre-wrap;
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 14px;
+            padding: 12px;
+            overflow: auto;
+        }
+        .small { color: var(--muted); font-size: 13px; }
+        .list { display: grid; gap: 10px; margin-top: 12px; }
+        .item {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px;
+            background: #f8fafc;
+            display: grid;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Subscription Test</h1>
+    <p class="small">Trang test tạo subscription do admin/manager thao tác. CAR gán slot riêng, MOTORBIKE gán zone riêng.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Create Subscription</h2>
+            <div class="row">
+                <div>
+                    <label>Vehicle</label>
+                    <select id="vehicleId"></select>
+                </div>
+                <div>
+                    <label>RFID Card ID</label>
+                    <input id="rfidCardId" value="RFID-SUB-001">
+                </div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label>Subscription Type</label>
+                    <select id="subscriptionType">
+                        <option value="WEEKLY">WEEKLY</option>
+                        <option value="MONTHLY" selected>MONTHLY</option>
+                        <option value="YEARLY">YEARLY</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Start At</label>
+                    <input id="startAt" type="datetime-local">
+                </div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label>Assigned Slot Id (CAR)</label>
+                    <select id="assignedSlotId"></select>
+                </div>
+                <div>
+                    <label>Assigned Zone Id (MOTORBIKE)</label>
+                    <select id="assignedZoneId"></select>
+                </div>
+            </div>
+
+            <label>Notes</label>
+            <textarea id="notes" rows="3" placeholder="Optional notes"></textarea>
+
+            <button onclick="createSubscription()">Create subscription</button>
+            <button class="secondary" onclick="loadAll()">Reload data</button>
+        </div>
+
+        <div class="card">
+            <h2>Output</h2>
+            <div id="status" class="small">Ready</div>
+            <pre id="result" class="result"></pre>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+        <h2>Find Subscription by Plate</h2>
+        <div class="row">
+            <div>
+                <label>Plate Number</label>
+                <input id="searchPlateNumber" placeholder="Example: 51A-12345">
+            </div>
+            <div style="display:flex; align-items:end; gap:10px;">
+                <button onclick="findByPlateNumber()">Search by plate</button>
+                <button class="secondary" onclick="fillRenewFromSearch()">Use result for renew</button>
+            </div>
+        </div>
+        <div class="small">Tìm subscription hiện tại của xe theo biển số rồi mới renew/cancel.</div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+        <h2>Renew Subscription</h2>
+        <div class="row">
+            <div>
+                <label>Subscription Id</label>
+                <input id="renewSubscriptionId" type="number" placeholder="Example: 1">
+            </div>
+            <div>
+                <label>Extend Days</label>
+                <input id="extendDays" type="number" min="1" value="30">
+            </div>
+        </div>
+        <label>Renew Notes</label>
+        <textarea id="renewNotes" rows="2" placeholder="Optional notes"></textarea>
+        <button onclick="renewSubscription()">Renew subscription</button>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+        <h2>Subscriptions</h2>
+        <button class="secondary" onclick="loadSubscriptions()">Refresh subscriptions</button>
+        <div id="subscriptions" class="list"></div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:8080' : '';
+    const vehicleSelect = document.getElementById('vehicleId');
+    const slotSelect = document.getElementById('assignedSlotId');
+    const zoneSelect = document.getElementById('assignedZoneId');
+    const statusEl = document.getElementById('status');
+    const resultEl = document.getElementById('result');
+    const subscriptionList = document.getElementById('subscriptions');
+    let lastSearchResult = null;
+
+    function setOutput(value, ok = true) {
+        statusEl.textContent = ok ? 'OK' : 'ERROR';
+        statusEl.style.color = ok ? '#047857' : '#b91c1c';
+        resultEl.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    }
+
+    async function readJson(response) {
+        const text = await response.text();
+        if (!response.ok) {
+            throw new Error(`${response.status} ${response.statusText}\n${text}`);
+        }
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+
+    function optionLabel(item) {
+        return `${item.id} - ${item.plateNumber || item.slotCode || item.zoneCode || item.subscriptionCode || 'Item'}`;
+    }
+
+    async function loadVehicles() {
+        const response = await fetch(`${API_BASE}/api/vehicles`, {credentials: 'include'});
+        const data = await readJson(response);
+        const payload = data.data || data;
+        vehicleSelect.innerHTML = payload.map(item => `<option value="${item.id}">${item.id} - ${item.plateNumber} (${item.vehicleType})</option>`).join('');
+    }
+
+    async function loadSlots() {
+        const response = await fetch(`${API_BASE}/api/slots?page=0&size=200`, {credentials: 'include'});
+        const data = await readJson(response);
+        const page = data.data || data;
+        const payload = page.content || [];
+        slotSelect.innerHTML = ['<option value="">-- none --</option>']
+            .concat(payload.map(item => `<option value="${item.id}">${item.id} - ${item.slotCode} (${item.status || ''})</option>`))
+            .join('');
+    }
+
+    async function loadZones() {
+        const response = await fetch(`${API_BASE}/api/zones`, {credentials: 'include'});
+        const data = await readJson(response);
+        const payload = data.data || data;
+        zoneSelect.innerHTML = ['<option value="">-- none --</option>']
+            .concat(payload.map(item => `<option value="${item.id}">${item.id} - ${item.zoneCode} (${item.status || ''})</option>`))
+            .join('');
+    }
+
+    async function loadSubscriptions() {
+        try {
+            const response = await fetch(`${API_BASE}/api/subscriptions`, {credentials: 'include'});
+            const data = await readJson(response);
+            const payload = data.data || data;
+            subscriptionList.innerHTML = payload.map(item => `
+                <div class="item">
+                    <div><strong>${item.subscriptionCode}</strong> | ${item.vehiclePlateNumber} | ${item.subscriptionType} | ${item.status}</div>
+                    <div class="small">RFID: ${item.rfidCardId || ''} | Slot: ${item.assignedSlotCode || '-'} | Zone: ${item.assignedZoneCode || '-'}</div>
+                    <div class="small">Start: ${item.startAt || ''} | End: ${item.endAt || ''}</div>
+                    <button class="secondary" onclick='useSubscription(${item.id}, ${JSON.stringify(item.vehiclePlateNumber || "")})'>Use for renew</button>
+                    <button class="danger" onclick="cancelSubscription(${item.id})">Cancel</button>
+                </div>
+            `).join('') || '<div class="small">No subscriptions yet.</div>';
+        } catch (e) {
+            subscriptionList.innerHTML = `<div class="small">${e.message}</div>`;
+        }
+    }
+
+    async function createSubscription() {
+        try {
+            const payload = {
+                vehicleId: Number(vehicleSelect.value),
+                rfidCardId: document.getElementById('rfidCardId').value.trim(),
+                subscriptionType: document.getElementById('subscriptionType').value,
+                startAt: document.getElementById('startAt').value || null,
+                assignedSlotId: document.getElementById('assignedSlotId').value ? Number(document.getElementById('assignedSlotId').value) : null,
+                assignedZoneId: document.getElementById('assignedZoneId').value ? Number(document.getElementById('assignedZoneId').value) : null,
+                notes: document.getElementById('notes').value
+            };
+
+            const response = await fetch(`${API_BASE}/api/subscriptions`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await readJson(response);
+            setOutput(data);
+            await loadSubscriptions();
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function cancelSubscription(id) {
+        try {
+            const response = await fetch(`${API_BASE}/api/subscriptions/${id}/cancel`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const data = await readJson(response);
+            setOutput(data);
+            await loadSubscriptions();
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function renewSubscription() {
+        try {
+            const subscriptionId = document.getElementById('renewSubscriptionId').value;
+            const payload = {
+                extendDays: Number(document.getElementById('extendDays').value),
+                notes: document.getElementById('renewNotes').value
+            };
+
+            const response = await fetch(`${API_BASE}/api/subscriptions/${subscriptionId}/renew`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await readJson(response);
+            setOutput(data);
+            await loadSubscriptions();
+        } catch (e) {
+            setOutput(e.message, false);
+        }
+    }
+
+    async function findByPlateNumber() {
+        try {
+            const plateNumber = document.getElementById('searchPlateNumber').value.trim();
+            const response = await fetch(`${API_BASE}/api/subscriptions/by-plate/${encodeURIComponent(plateNumber)}`, {
+                credentials: 'include'
+            });
+            const data = await readJson(response);
+            lastSearchResult = data.data || data;
+            setOutput(data);
+        } catch (e) {
+            lastSearchResult = null;
+            setOutput(e.message, false);
+        }
+    }
+
+    function useSubscription(id, plateNumber) {
+        document.getElementById('renewSubscriptionId').value = id;
+        document.getElementById('searchPlateNumber').value = plateNumber || '';
+        setOutput({message: `Selected subscription ${id} for plate ${plateNumber || ''}`});
+    }
+
+    function fillRenewFromSearch() {
+        if (!lastSearchResult) {
+            setOutput('Please search by plate first.', false);
+            return;
+        }
+        document.getElementById('renewSubscriptionId').value = lastSearchResult.id;
+        document.getElementById('searchPlateNumber').value = lastSearchResult.vehiclePlateNumber || '';
+        setOutput(lastSearchResult);
+    }
+
+    async function loadAll() {
+        await Promise.all([loadVehicles(), loadSlots(), loadZones(), loadSubscriptions()]);
+        setOutput('Loaded vehicles, slots, zones, and subscriptions.');
+    }
+
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    document.getElementById('startAt').value = local.toISOString().slice(0, 16);
+    loadAll().catch(e => setOutput(e.message, false));
+</script>
+</body>
+</html>
